@@ -82,6 +82,10 @@ int nvs_get_u8(uint32_t handle, const char* key, uint8_t* out_value) { return 0x
 int nvs_set_u8(uint32_t handle, const char* key, uint8_t value) { return 0; }
 int nvs_get_i32(uint32_t handle, const char* key, int32_t* out_value) { return 0x1102; }
 int nvs_set_i32(uint32_t handle, const char* key, int32_t value) { return 0; }
+int nvs_get_u16(uint32_t handle, const char* key, uint16_t* out_value) { return 0x1102; }
+int nvs_set_u16(uint32_t handle, const char* key, uint16_t value) { return 0; }
+int nvs_get_i8(uint32_t handle, const char* key, int8_t* out_value) { return 0x1102; }
+int nvs_set_i8(uint32_t handle, const char* key, int8_t value) { return 0; }
 int nvs_get_str(uint32_t handle, const char* key, char* out_value, size_t* length) { return 0x1102; }
 int nvs_set_str(uint32_t handle, const char* key, const char* value) { return 0; }
 
@@ -91,9 +95,63 @@ int esp_partition_read(void* partition, size_t src_offset, void* dst, size_t siz
 int esp_partition_write(void* partition, size_t dst_offset, const void* src, size_t size) { return 0; }
 int esp_partition_erase_range(void* partition, size_t offset, size_t size) { return 0; }
 
-// Power Management
+// Power Management / Watchdog
 int esp_sleep_enable_timer_wakeup(uint64_t time_in_us) { return 0; }
 int esp_light_sleep_start(void) { return 0; }
+void pp_soft_wdt_stop() {}
+void pp_soft_wdt_restart() {}
+void esp_supplicant_deinit() {}
+int esp_supplicant_init() { return 0; }
+void hostap_deinit(void* data) {}
+void* wpa_config_parse_string(void* config, const char* name, const char* value) { return NULL; }
+void wpa_michael_mic_failure(void* data, int key_id) {}
+
+// LwIP stubs for missing features
+void raw_netif_ip_addr_changed(void* old_addr, void* new_addr) {}
+void udp_netif_ip_addr_changed(void* old_addr, void* new_addr) {}
+void igmp_stop(void* netif) {}
+void igmp_start(void* netif) {}
+void igmp_report_groups(void* netif) {}
+void dhcp_cleanup(void* netif) {}
+void etharp_request(void* netif, void* ipaddr) {}
+void etharp_cleanup_netif(void* netif) {}
+void* memp_malloc(int type) { return NULL; }
+void memp_free(int type, void* mem) {}
+void mem_free(void* mem) {}
+void* mem_malloc(size_t size) { return NULL; }
+
+void tcpip_adapter_set_default_wifi_handlers() {}
+int sha1_vector(size_t num_elem, const uint8_t *addr[], const size_t *len, uint8_t *mac) { return 0; }
+
+// Protocol stubs for missing LwIP features
+int udp_bind(void* pcb, void* ipaddr, uint16_t port) { return 0; }
+int udp_send(void* pcb, void* p) { return 0; }
+int udp_sendto(void* pcb, void* p, void* ipaddr, uint16_t port) { return 0; }
+void* udp_new_ip_type(uint8_t type) { return NULL; }
+void udp_recv(void* pcb, void* cb, void* recv_arg) {}
+void udp_remove(void* pcb) {}
+
+int raw_send(void* pcb, void* p) { return 0; }
+int raw_sendto(void* pcb, void* p, void* ipaddr) { return 0; }
+void* raw_new_ip_type(uint8_t type) { return NULL; }
+void raw_recv(void* pcb, void* cb, void* recv_arg) {}
+void raw_remove(void* pcb) {}
+int raw_bind(void* pcb, void* ipaddr) { return 0; }
+
+int igmp_joingroup(void* srcaddr, void* groupaddr) { return 0; }
+int igmp_leavegroup(void* srcaddr, void* groupaddr) { return 0; }
+
+uint16_t inet_chksum(const void *dataptr, uint16_t len) { return 0; }
+uint16_t ip_chksum_pseudo(void *p, void *src, void *dest, uint8_t proto, uint16_t proto_len) { return 0; }
+
+uint16_t lwip_htons(uint16_t x) { return (x << 8) | (x >> 8); }
+uint32_t lwip_htonl(uint32_t x) { return ((x & 0xff) << 24) | ((x & 0xff00) << 8) | ((x & 0xff0000) >> 8) | (x >> 24); }
+void* mem_trim(void* mem, size_t size) { return mem; }
+void* ip_data;
+
+// Thread-local storage stubs for LwIP/FreeRTOS
+void* pthread_getspecific(uint32_t key) { return NULL; }
+int pthread_setspecific(uint32_t key, const void* value) { return 0; }
 
 void uart_tx_wait_idle(int uart) {}
 

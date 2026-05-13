@@ -19,6 +19,8 @@ const portBase = currentSourcePath().parentDir()
 {.passC: "-I" & sdkBase / "components/wpa_supplicant/src".}
 {.passC: "-I" & sdkBase / "components/wpa_supplicant/src/crypto".}
 {.passC: "-I" & sdkBase / "components/wpa_supplicant/port/include".}
+{.passC: "-I" & sdkBase / "components/wpa_supplicant/include/esp_supplicant".}
+{.passC: "-I" & sdkBase / "components/wpa_supplicant/src/esp_supplicant".}
 {.passC: "-I" & sdkBase / "components/lwip/include/apps".}
 {.passC: "-I" & sdkBase / "components/lwip/include/apps/sntp".}
 {.passC: "-I" & sdkBase / "components/lwip/lwip/src/include".}
@@ -45,6 +47,10 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-ccm.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-internal.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-internal-enc.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1-pbkdf2.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-omac1.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1.c".}
+{.compile: sdkBase / "components/wpa_supplicant/port/os_xtensa.c".}
 {.compile: portBase / "stubs.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi_os_adapter.c".}
@@ -76,6 +82,12 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/lwip/lwip/src/core/netif.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/timeouts.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/sockets.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/api/tcpip.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/ip4_frag.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/api/api_lib.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/api/api_msg.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/api/netbuf.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/api/err.c".}
 {.compile: sdkBase / "components/lwip/port/esp8266/freertos/sys_arch.c".}
 
 # For a library, we want to expose types and procs
@@ -87,9 +99,13 @@ const
   ESP_OK* = 0
   AF_INET* = 2
   SOCK_STREAM* = 1
+  IPPROTO_IP* = 0
   IPPROTO_TCP* = 6
+  INADDR_ANY* = 0
 
 type
+  sockaddr* {.importc: "struct sockaddr", header: "lwip/sockets.h".} = object
+  
   in_addr* {.importc: "struct in_addr", header: "lwip/sockets.h".} = object
     s_addr*: uint32
 
@@ -100,20 +116,59 @@ type
     sin_addr*: in_addr
     sin_zero*: array[8, char]
 
-  sockaddr* {.importc: "struct sockaddr", header: "lwip/sockets.h".} = object
+proc vTaskDelay*(xTicksToDelay: uint32) {.importc, header: "freertos/FreeRTOS.h".}
 
 # Wi-Fi
-proc esp_wifi_init*(config: pointer): esp_err_t {.importc, header: "esp_wifi.h".}
+type
+  wifi_init_config_t* {.importc: "wifi_init_config_t", header: "esp_wifi.h".} = object
+    event_handler*: pointer
+    osi_funcs*: pointer
+    qos_enable*: uint8
+    ampdu_rx_enable*: uint8
+    rx_ba_win*: uint8
+    rx_ampdu_buf_num*: uint8
+    rx_ampdu_buf_len*: uint32
+    rx_max_single_pkt_len*: uint32
+    rx_buf_len*: uint32
+    amsdu_rx_enable*: uint8
+    rx_buf_num*: uint8
+    rx_pkt_num*: uint8
+    left_continuous_rx_buf_num*: uint8
+    tx_buf_num*: uint8
+    nvs_enable*: uint8
+    nano_enable*: uint8
+    wpa3_sae_enable*: uint8
+    magic*: uint32
+
+proc esp_wifi_init*(config: ptr wifi_init_config_t): esp_err_t {.importc, header: "esp_wifi.h".}
+
 proc esp_wifi_set_mode*(mode: int32): esp_err_t {.importc, header: "esp_wifi.h".}
 proc esp_wifi_start*(): esp_err_t {.importc, header: "esp_wifi.h".}
+proc esp_wifi_connect*(): esp_err_t {.importc, header: "esp_wifi.h".}
+
+type
+  wifi_sta_config_t* {.importc: "wifi_sta_config_t", header: "esp_wifi.h".} = object
+    ssid*: array[32, uint8]
+    password*: array[64, uint8]
+    # ignoring other fields for now as they default to 0
+
+  wifi_config_t* {.importc: "wifi_config_t", header: "esp_wifi.h", union.} = object
+    sta*: wifi_sta_config_t
+
+proc esp_wifi_set_config*(interface_id: int32, config: ptr wifi_config_t): esp_err_t {.importc, header: "esp_wifi.h".}
+
+const
+  WIFI_IF_STA* = 0
+  WIFI_MODE_STA* = 1
+
 
 # Sockets
 proc lwip_socket*(domain, socketType, protocol: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_bind*(s: int32, name: ptr sockaddr, namelen: socklen_t): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_bind*(s: int32, name: ptr sockaddr, namelen: uint32): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_listen*(s: int32, backlog: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_accept*(s: int32, address: ptr sockaddr, addrlen: ptr socklen_t): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_read*(s: int32, mem: pointer, len: csize_t): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_write*(s: int32, dataptr: pointer, size: csize_t): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_accept*(s: int32, addr_ptr: ptr sockaddr, addrlen: ptr uint32): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_recv*(s: int32, mem: pointer, len: uint32, flags: int32): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_send*(s: int32, dataptr: pointer, size: uint32, flags: int32): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_close*(s: int32): int32 {.importc, header: "lwip/sockets.h".}
 
 # Helper for htons
