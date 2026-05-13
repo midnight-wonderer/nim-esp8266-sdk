@@ -137,6 +137,7 @@ _chip_nmi_cnt:   .space 4
 #endif
 
     .section    .data, "aw"
+    .literal_position
     .global     _chip_interrupt_stk, _chip_interrupt_tmp
     .align      16
 _chip_interrupt_stk:
@@ -560,16 +561,18 @@ Debug Exception.
     .align      4
     .literal_position
 _DebugExceptionVector:
+    .begin no-longcalls
     wsr     a0,  EXCSAVE_1
     wsr     a1,  EXCSAVE_2
     movi    a0,  1
     wsr     a0,  EXCCAUSE
     call0   _xt_debug_exc
-
+    .end no-longcalls
     .end        literal_prefix
 
 
-    .section    .text
+    .section    .iram0.text, "ax"
+    .literal_position
     .type       _xt_user_exc,@function
     .align      4
 _xt_debug_exc:
@@ -592,7 +595,8 @@ Double exceptions are not a normal occurrence. They indicate a bug of some kind.
 _DoubleExceptionVector:
     wsr     a0,  EXCSAVE_1
     wsr     a1,  EXCSAVE_2
-    j       _xt_ext_panic
+    movi    a0, _xt_ext_panic
+    jx      a0
     rfde                                        /* make a0 point here not later */
 
     .end        literal_prefix
@@ -612,7 +616,8 @@ Kernel Exception (including Level 1 Interrupt from kernel mode).
 _KernelExceptionVector:
     wsr     a0,  EXCSAVE_1                          /* preserve a0 */
     wsr     a1,  EXCSAVE_2
-    j       _xt_ext_panic
+    movi    a0, _xt_ext_panic
+    jx      a0
 
     /* never returns here - call0 is used as a jump (see note at top) */
 
@@ -635,7 +640,9 @@ _UserExceptionVector:
 
     wsr     a0,  EXCSAVE_1                      /* preserve a0 */
     wsr     a1,  EXCSAVE_2
+    .begin no-longcalls
     call0   _xt_user_exc                        /* user exception handler */
+    .end no-longcalls
     /* never returns here - call0 is used as a jump (see note at top) */
 
     .end        literal_prefix
@@ -654,7 +661,8 @@ _xt_user_exc:
     beqi    a0,  EXCCAUSE_LOAD_STORE_ERROR,  LoadStoreErrorHandler
     beqi    a0,  EXCCAUSE_LEVEL1INTERRUPT,  _xt_user_entry1
 
-    j   _xt_ext_panic
+    movi    a0, _xt_ext_panic
+    jx      a0
 
 _xt_user_entry1:
     /* Allocate interrupt stack frame and save minimal context. */
@@ -746,7 +754,9 @@ documentation: "Microprocessor Programmer's Guide".
 _NMIExceptionVector:
     wsr     a0,  EXCSAVE + XCHAL_NMILEVEL           /* preserve a0 */
     wsr     a1,  EXCSAVE_2
+    .begin no-longcalls
     call0   _xt_nmi                                 /* load interrupt handler */
+    .end no-longcalls
     /* never returns here - call0 is used as a jump (see note at top) */
 
     .end        literal_prefix
@@ -929,6 +939,8 @@ nmi_rfi:
     rfi XCHAL_NMILEVEL
 
 
+    .section    .iram0.text, "ax"
+    .literal_position
     .global     _xt_ext_panic
     .type       _xt_ext_panic, @function
     .align      4

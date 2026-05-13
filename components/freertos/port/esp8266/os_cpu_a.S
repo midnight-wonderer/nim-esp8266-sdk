@@ -20,6 +20,7 @@
     .extern CCOMPARE_AddVal
 
     .section    .text
+    .literal_position
 
     .macro  xtos_lock    ax
     rsil    \ax,    XCHAL_EXCM_LEVEL
@@ -141,6 +142,7 @@ _xt_int_exit:
 **********************************************************************************************************
 */
     .section    .text._xt_tick_timer_init, "ax"
+    .literal_position
     .globl      _xt_tick_timer_init
     .type       _xt_tick_timer_init,@function
     .align      4
@@ -169,6 +171,7 @@ _xt_tick_timer_init:
     RET(16)
 
     .section    .text._xt_set_xt_ccompare_val, "ax"
+    .literal_position
     .globl      _xt_set_xt_ccompare_val
     .type       _xt_set_xt_ccompare_val,@function
     .align      4
@@ -183,6 +186,7 @@ _xt_set_xt_ccompare_val:
     RET(16)
 
     .section    .text.ResetCcountVal, "ax"
+    .literal_position
     .globl      ResetCcountVal
     .type       ResetCcountVal,@function
     .align      4
@@ -198,6 +202,7 @@ ResetCcountVal:
 */
 
     .section    .text._xt_isr_unmask, "ax"
+    .literal_position
     .globl      _xt_isr_unmask
     .type       _xt_isr_unmask,@function
     .align      4
@@ -215,6 +220,7 @@ _xt_isr_unmask:
 
 
     .section    .text._xt_isr_mask, "ax"
+    .literal_position
     .globl      _xt_isr_mask
     .type       _xt_isr_mask,@function
     .align      4
@@ -233,6 +239,7 @@ _xt_isr_mask:
 
 
     .section    .text._xt_enter_first_task, "ax"
+    .literal_position
     .globl      _xt_enter_first_task
     .type       _xt_enter_first_task,   @function
     .align      4
