@@ -26,6 +26,8 @@ switch("passC", "-DICACHE_FLASH")
 switch("passC", "-fstrict-volatile-bitfields")
 switch("passC", "-ffunction-sections")
 switch("passC", "-fdata-sections")
+switch("passC", "-DCONFIG_IEEE80211W")
+switch("passC", "-include sdkconfig.h")
 
 # Linker flags
 switch("passL", "-Wl,--gc-sections")

@@ -53,34 +53,51 @@ void __assert_func(const char *file, int line, const char *func, const char *fai
 }
 
 // SDK missing symbols stubs
-void esp_phy_init_clk() {}
 void esp_reset_reason_early() {}
 void esp_reset_reason_init() {}
 void esp_pthread_init() {}
 void chip_boot() {}
 void esp_newlib_init() {}
-// void esp_event_send() {} // Already in source
 void esp_sleep_start() {}
 void esp_task_wdt_reset() {}
 void esp_sleep_lock() {}
 void esp_sleep_unlock() {}
 long long esp_timer_get_time() { return 0; }
-// void esp_random() {} // Already in hw_random.c
 
-void nvs_commit() {}
-void nvs_flash_init() {}
-void nvs_close() {}
-void nvs_open() {}
-void nvs_get_blob() {}
-void nvs_set_blob() {}
-void esp_crc8() {}
+// NVS stubs (better signatures)
+int nvs_flash_init(void) { return 0; }
+int nvs_open(const char* name, int open_mode, uint32_t *out_handle) { 
+    *out_handle = 1; 
+    return 0; 
+}
+void nvs_close(uint32_t handle) {}
+int nvs_commit(uint32_t handle) { return 0; }
+int nvs_get_blob(uint32_t handle, const char* key, void* out_value, size_t* length) {
+    return 0x1102; // ESP_ERR_NVS_NOT_FOUND
+}
+int nvs_set_blob(uint32_t handle, const char* key, const void* value, size_t length) {
+    return 0;
+}
+int nvs_get_u8(uint32_t handle, const char* key, uint8_t* out_value) { return 0x1102; }
+int nvs_set_u8(uint32_t handle, const char* key, uint8_t value) { return 0; }
+int nvs_get_i32(uint32_t handle, const char* key, int32_t* out_value) { return 0x1102; }
+int nvs_set_i32(uint32_t handle, const char* key, int32_t value) { return 0; }
+int nvs_get_str(uint32_t handle, const char* key, char* out_value, size_t* length) { return 0x1102; }
+int nvs_set_str(uint32_t handle, const char* key, const char* value) { return 0; }
+
+// Storage / Partition stubs
+void* esp_partition_find_first(int type, int subtype, const char* label) { return NULL; }
+int esp_partition_read(void* partition, size_t src_offset, void* dst, size_t size) { return 0; }
+int esp_partition_write(void* partition, size_t dst_offset, const void* src, size_t size) { return 0; }
+int esp_partition_erase_range(void* partition, size_t offset, size_t size) { return 0; }
+
+// Power Management
+int esp_sleep_enable_timer_wakeup(uint64_t time_in_us) { return 0; }
+int esp_light_sleep_start(void) { return 0; }
+
+void uart_tx_wait_idle(int uart) {}
+
+uint8_t esp_crc8(const uint8_t *src, size_t len) { return 0; }
 
 void Cache_Read_Enable_New() {}
 void panicHandler() {}
-
-// _xt_ext_panic is in xtensa_vectors.S
-
-// More encryption stubs
-void ccmp_encrypt() {}
-void aes_ccm_ae() {}
-void aes_ccm_ad() {}

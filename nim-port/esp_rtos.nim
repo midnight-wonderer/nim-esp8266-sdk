@@ -16,6 +16,9 @@ const portBase = currentSourcePath().parentDir()
 {.passC: "-I" & sdkBase / "components/vfs/include".}
 {.passC: "-I" & sdkBase / "components/newlib/platform_include".}
 {.passC: "-I" & sdkBase / "components/wpa_supplicant/include".}
+{.passC: "-I" & sdkBase / "components/wpa_supplicant/src".}
+{.passC: "-I" & sdkBase / "components/wpa_supplicant/src/crypto".}
+{.passC: "-I" & sdkBase / "components/wpa_supplicant/port/include".}
 {.passC: "-I" & sdkBase / "components/lwip/include/apps".}
 {.passC: "-I" & sdkBase / "components/lwip/include/apps/sntp".}
 {.passC: "-I" & sdkBase / "components/lwip/lwip/src/include".}
@@ -39,12 +42,16 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/esp_event/esp_event.c".}
 {.compile: sdkBase / "components/esp_event/event_send.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/ccmp.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-ccm.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-internal.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-internal-enc.c".}
 {.compile: portBase / "stubs.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi_os_adapter.c".}
 {.compile: sdkBase / "components/esp8266/source/ets_printf.c".}
 {.compile: sdkBase / "components/esp8266/source/system_api.c".}
 {.compile: sdkBase / "components/esp8266/source/startup.c".}
+{.compile: sdkBase / "components/esp8266/source/phy_init.c".}
 {.compile: sdkBase / "components/tcpip_adapter/tcpip_adapter_lwip.c".}
 {.compile: sdkBase / "components/log/log.c".}
 {.compile: sdkBase / "components/heap/src/esp_heap_caps.c".}
@@ -101,10 +108,10 @@ proc esp_wifi_set_mode*(mode: int32): esp_err_t {.importc, header: "esp_wifi.h".
 proc esp_wifi_start*(): esp_err_t {.importc, header: "esp_wifi.h".}
 
 # Sockets
-proc lwip_socket*(domain, type, protocol: int32): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_socket*(domain, socketType, protocol: int32): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_bind*(s: int32, name: ptr sockaddr, namelen: socklen_t): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_listen*(s: int32, backlog: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_accept*(s: int32, addr: ptr sockaddr, addrlen: ptr socklen_t): int32 {.importc, header: "lwip/sockets.h".}
+proc lwip_accept*(s: int32, address: ptr sockaddr, addrlen: ptr socklen_t): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_read*(s: int32, mem: pointer, len: csize_t): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_write*(s: int32, dataptr: pointer, size: csize_t): int32 {.importc, header: "lwip/sockets.h".}
 proc lwip_close*(s: int32): int32 {.importc, header: "lwip/sockets.h".}
