@@ -93,7 +93,7 @@ proc setEntryState(table: var array[32, uint8], index: int, state: EntryState) =
   let bitShift = (index mod 4) * 2
   table[byteIdx] = (table[byteIdx] and not (0x3.uint8 shl bitShift)) or (state.uint8 shl bitShift)
 
-proc findItem(nsIndex: uint8, datatype: uint8, key: string): (esp_err_t, Item, uint32, int) =
+proc findItem(nsIndex: uint8, datatype: uint8, key: string, chunkIndex: uint8 = 0xff): (esp_err_t, Item, uint32, int) =
   for pageIdx in 0..<NUM_PAGES:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     var header: PageHeader
@@ -110,11 +110,12 @@ proc findItem(nsIndex: uint8, datatype: uint8, key: string): (esp_err_t, Item, u
           var itemKey = ""
           for c in item.key: (if c == '\0': break; itemKey.add(c))
           if itemKey == key:
+            if chunkIndex != 0xfe and item.chunkIndex != chunkIndex: continue
             if datatype == T_ANY.uint8 or item.datatype == datatype: return (ESP_OK, item, pageAddr, entryIdx)
             else: return (ESP_ERR_NVS_TYPE_MISMATCH, item, pageAddr, entryIdx)
   return (ESP_ERR_NVS_NOT_FOUND, Item(), 0, 0)
 
-proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint8]): esp_err_t =
+proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint8], chunkIndex: uint8 = 0xff): esp_err_t =
   var targetPageAddr = 0.uint32
   var targetEntryIdx = -1
   var targetPageHeader: PageHeader
@@ -136,7 +137,7 @@ proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint
       if targetEntryIdx != -1: break
   if targetEntryIdx == -1: return ESP_ERR_NVS_NO_FREE_PAGES
   var item: Item
-  item.nsIndex = nsIndex; item.datatype = datatype; item.span = 1; item.chunkIndex = 0xff
+  item.nsIndex = nsIndex; item.datatype = datatype; item.span = 1; item.chunkIndex = chunkIndex
   for i in 0..<min(key.len, 15): item.key[i] = key[i]
   item.key[min(key.len, 15)] = '\0'; item.data = data; item.crc32 = calculateCrc32(item)
   let itemAddr = targetPageAddr + ENTRY_DATA_OFFSET + (targetEntryIdx.uint32 * ENTRY_SIZE)
@@ -147,8 +148,10 @@ proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint
   discard spi_flash_write(wordAddr, addr wordData, 4); return ESP_OK
 
 proc eraseOldItem(nsIndex: uint8, datatype: uint8, key: string) =
-  let (res, _, pageAddr, entryIdx) = findItem(nsIndex, datatype, key)
-  if res == ESP_OK:
+  while true:
+    let (res, _, pageAddr, entryIdx) = findItem(nsIndex, datatype, key, 0xfe) # 0xfe means "any chunk"
+    if res != ESP_OK: break
+    
     var entryTable: array[32, uint8]
     discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr entryTable, 32)
     setEntryState(entryTable, entryIdx, ES_ERASED)
@@ -219,10 +222,50 @@ proc nvs_set_i32*(handle: nvs_handle_t, key: cstring, value: int32): esp_err_t {
   return nvs_set_u32(handle, key, cast[uint32](value))
 
 proc nvs_get_blob*(handle: nvs_handle_t, key: cstring, out_value: pointer, length: ptr uint32): esp_err_t {.exportc.} =
-  if handle == 0x1234 and $key == "cal_data":
-    if out_value == nil: (length[] = 128; return ESP_OK)
-    if length[] >= 128: (var p = cast[ptr array[128, uint8]](out_value); for i in 0..<128: p[i] = 0; return ESP_OK)
-  return ESP_ERR_NVS_NOT_FOUND
+  let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
+  
+  if out_value == nil:
+    # Just return the length
+    var totalLen: uint32 = 0
+    var chunk: uint8 = 0
+    while true:
+      let (res, _, _, _) = findItem(nsIndex, T_BLOB.uint8, $key, chunk)
+      if res != ESP_OK: break
+      totalLen += 8
+      chunk += 1
+    if totalLen == 0: return ESP_ERR_NVS_NOT_FOUND
+    length[] = totalLen
+    return ESP_OK
+  
+  # Copy the data
+  var offset: uint32 = 0
+  var chunk: uint8 = 0
+  while offset < length[]:
+    let (res, item, _, _) = findItem(nsIndex, T_BLOB.uint8, $key, chunk)
+    if res != ESP_OK: break
+    let copyLen = min(8.uint32, length[] - offset)
+    copyMem(cast[pointer](cast[uint32](out_value) + offset), addr item.data[0], copyLen)
+    offset += 8
+    chunk += 1
+  
+  return if offset > 0: ESP_OK else: ESP_ERR_NVS_NOT_FOUND
+
+proc nvs_set_blob*(handle: nvs_handle_t, key: cstring, value: pointer, length: uint32): esp_err_t {.exportc.} =
+  let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
+  eraseOldItem(nsIndex, T_BLOB.uint8, $key)
+  
+  var offset: uint32 = 0
+  var chunk: uint8 = 0
+  while offset < length:
+    var d: array[8, uint8]
+    let copyLen = min(8.uint32, length - offset)
+    copyMem(addr d[0], cast[pointer](cast[uint32](value) + offset), copyLen)
+    let res = writeItem(nsIndex, T_BLOB.uint8, $key, d, chunk)
+    if res != ESP_OK: return res
+    offset += 8
+    chunk += 1
+  
+  return ESP_OK
 
 proc nvs_close*(handle: nvs_handle_t) {.exportc.} = discard
 proc nvs_commit*(handle: nvs_handle_t): esp_err_t {.exportc.} = ESP_OK

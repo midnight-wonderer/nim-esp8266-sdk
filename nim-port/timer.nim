@@ -11,8 +11,8 @@ type
   esp_timer_dispatch_t* = enum
     ESP_TIMER_TASK = 0
     
-  # Struct mirror for C compatibility if needed
-  esp_timer_create_args_t* {.importc: "esp_timer_create_args_t", header: "esp_timer.h".} = object
+  # Struct mirror for C compatibility
+  esp_timer_create_args_t* = object
     callback*: esp_timer_cb_t
     arg*: pointer
     dispatch_method*: esp_timer_dispatch_t
@@ -70,13 +70,13 @@ proc esp_timer_callback(xTimer: pointer) {.cdecl.} =
 
 # --- Public API Implementation (Exported to C) ---
 
-proc esp_timer_init*(): esp_err_t {.exportc.} =
+proc esp_timer_init*(): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   return 0 # ESP_OK
 
-proc esp_timer_deinit*(): esp_err_t {.exportc.} =
+proc esp_timer_deinit*(): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   return 0 # ESP_OK
 
-proc esp_timer_create*(create_args: ptr esp_timer_create_args_t, out_handle: ptr esp_timer_handle_t): esp_err_t {.exportc.} =
+proc esp_timer_create*(create_args: ptr esp_timer_create_args_t, out_handle: ptr esp_timer_handle_t): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   if create_args == nil or out_handle == nil: return -1
   
   let timer = cast[esp_timer_handle_t](alloc0(sizeof(esp_timer_obj)))
@@ -96,7 +96,7 @@ proc esp_timer_create*(create_args: ptr esp_timer_create_args_t, out_handle: ptr
   out_handle[] = timer
   return 0
 
-proc esp_timer_start_once*(timer: esp_timer_handle_t, timeout_us: uint64): esp_err_t {.exportc.} =
+proc esp_timer_start_once*(timer: esp_timer_handle_t, timeout_us: uint64): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   if timer == nil: return -1
   
   let ticks = uint32(timeout_us div (1000000 div CONFIG_FREERTOS_HZ))
@@ -107,7 +107,7 @@ proc esp_timer_start_once*(timer: esp_timer_handle_t, timeout_us: uint64): esp_e
     return 0
   return -1
 
-proc esp_timer_start_periodic*(timer: esp_timer_handle_t, period: uint64): esp_err_t {.exportc.} =
+proc esp_timer_start_periodic*(timer: esp_timer_handle_t, period: uint64): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   if timer == nil: return -1
   
   let ticks = uint32(period div (1000000 div CONFIG_FREERTOS_HZ))
@@ -118,14 +118,14 @@ proc esp_timer_start_periodic*(timer: esp_timer_handle_t, period: uint64): esp_e
     return 0
   return -1
 
-proc esp_timer_stop*(timer: esp_timer_handle_t): esp_err_t {.exportc.} =
+proc esp_timer_stop*(timer: esp_timer_handle_t): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   if timer == nil: return -1
   if xTimerStop(timer.os_timer, portMAX_DELAY) == 1:
     timer.state = ESP_TIMER_STOP
     return 0
   return -1
 
-proc esp_timer_delete*(timer: esp_timer_handle_t): esp_err_t {.exportc.} =
+proc esp_timer_delete*(timer: esp_timer_handle_t): esp_err_t {.exportc, codegenDecl: "esp_err_t $2$3".} =
   if timer == nil: return -1
   if xTimerDelete(timer.os_timer, portMAX_DELAY) == 1:
     dealloc(timer)
@@ -141,5 +141,5 @@ proc soc_get_ccount(): uint32 {.inline.} =
     :"=r"(`result`)
   """
 
-proc esp_timer_get_time*(): int64 {.exportc.} =
+proc esp_timer_get_time*(): int64 {.exportc, codegenDecl: "int64_t $2$3".} =
   return cast[int64](g_esp_os_us + (soc_get_ccount() div CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ).uint64)

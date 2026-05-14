@@ -107,6 +107,26 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/lwip/lwip/src/api/err.c".}
 {.compile: "mdns.c".}
 {.compile: "mdns_networking.c".}
+{.compile: sdkBase / "components/esp8266/source/crc.c".}
+{.compile: sdkBase / "components/spi_flash/src/spi_flash.c".}
+{.compile: sdkBase / "components/spi_flash/src/spi_flash_raw.c".}
+{.compile: sdkBase / "components/esp_event/default_event_loop.c".}
+{.compile: sdkBase / "components/tcpip_adapter/event_handlers.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/icmp6.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/ip6_frag.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/ip6_addr.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/nd6.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/mld6.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/ethip6.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/etharp.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/igmp.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/dhcp.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/icmp.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/dns.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/inet_chksum.c".}
+{.compile: sdkBase / "components/lwip/apps/dhcpserver/dhcpserver.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/netif/ethernet.c".}
+{.compile: sdkBase / "components/lwip/port/esp8266/netif/wlanif.c".}
 {.compile: sdkBase / "components/lwip/port/esp8266/freertos/sys_arch.c".}
 
 type
