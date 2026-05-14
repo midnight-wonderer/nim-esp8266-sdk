@@ -40,8 +40,6 @@ let cfgContent = """
 --os:any
 --mm:arc
 --threads:off
---gcc.exe:xtensa-lx106-elf-gcc
---gcc.linkerexe:xtensa-lx106-elf-gcc
 --define:noSignalHandler
 --define:dynlibOverrideAll
 --define:useMalloc
@@ -62,4 +60,4 @@ writeFile("nim.cfg", finalCfg)
 echo "Created nim.cfg for IDE support"
 
 echo "Project initialized successfully!"
-echo "You can now run 'nim c main.nim' to compile."
+echo "You can now run 'nim c ./src/<your-application>.nim' to compile."
