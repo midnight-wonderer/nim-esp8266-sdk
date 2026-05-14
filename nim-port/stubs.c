@@ -22,12 +22,6 @@ void esp_reconfigure_debug_uart(int uart_num) {}
 
 // LwIP / Networking stubs
 
-// mDNS stubs
-void mDNS_PlatformLocalIPArray(const char *const mDNSName, void *const IPArray,
-                               int const ArraySize) {}
-void mDNS_PlatformSourceAddrForDest(void *const DestAddr,
-                                    void *const SourceAddr) {}
-
 void esp_vfs_lwip_sockets_register(void) {}
 
 void *_sbrk_r(struct _reent *r, ptrdiff_t incr) { return NULL; }

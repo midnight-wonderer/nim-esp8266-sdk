@@ -18,6 +18,7 @@ proc app_main*() {.exportc.} =
   )
 
   discard esp_wifi_init(addr init_cfg)
+  discard esp_event_loop_create_default()
   discard esp_wifi_set_mode(WIFI_MODE_STA)
   
   var wifi_cfg: wifi_config_t
@@ -29,6 +30,7 @@ proc app_main*() {.exportc.} =
   
   # Start Wi-Fi
   discard esp_wifi_start()
+  discard esp_wifi_connect()
   
   # Init TCP/IP
   tcpip_adapter_init()
