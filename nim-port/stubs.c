@@ -116,8 +116,7 @@ int pthread_key_create(uint32_t *key, void (*destructor)(void *)) {
   return 0;
 }
 
-void pp_soft_wdt_stop(void) {}
-void pp_soft_wdt_restart(void) {}
+
 
 void esp_supplicant_init(void) {}
 
@@ -132,6 +131,6 @@ void panicHandler(void *frame) {
   while (1)
     ;
 }
-void esp_task_wdt_reset(void) {}
+
 void esp_sleep_start(void) {}
 void esp_supplicant_deinit(void) {}

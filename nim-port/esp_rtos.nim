@@ -65,6 +65,7 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/esp8266/source/ets_printf.c".}
 {.compile: sdkBase / "components/esp8266/source/system_api.c".}
 {.compile: sdkBase / "components/esp8266/source/startup.c".}
+{.compile: sdkBase / "components/esp8266/source/task_wdt.c".}
 {.compile: sdkBase / "components/esp8266/source/phy_init.c".}
 {.compile: sdkBase / "components/tcpip_adapter/tcpip_adapter_lwip.c".}
 {.compile: sdkBase / "components/log/log.c".}
