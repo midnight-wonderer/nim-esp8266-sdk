@@ -44,9 +44,3 @@ docs/doxygen_sqlite3.db
 .DS_Store
 
 docs/_build/
-
-# Nim port artifacts
-nim-port/test
-nim-port/.keep
-nim-port/build.log
-nim-port/build_output.txt
