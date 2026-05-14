@@ -14,33 +14,44 @@ This library packages the entire ESP8266_RTOS_SDK and provides Nim bindings for 
 
 - **Xtensa Toolchain**: You must have `xtensa-lx106-elf-gcc` in your PATH.
 - **Nim**: Version 2.
+## Quick Start
 
-## Configuration
+### 1. Installation
 
-To simplify your project setup, the library provides a centralized configuration helper. Create a `config.nims` in your project root with the following content:
-
-```nim
-import os, strutils
-const sdkPath = gorge("nimble path esp8266_sdk").strip()
-if sdkPath != "":
-  include sdkPath / "src/config_helper.nims"
-```
-
-This helper automatically:
-1. Configures the cross-compiler and architecture flags.
-2. Sets up the linker scripts and static libraries.
-3. Provides a `flash` task (`nim flash`).
-4. Provides a `setup` task (`nim setup`) to generate `nim.cfg` for IDE support.
-5. Handles `sdkconfig.h` (uses your project's `src/sdkconfig.h` if present, otherwise falls back to a library default).
-
-## Usage
-
-Add this to your `.nimble` file:
+Add the library to your project's `.nimble` file:
 ```nim
 requires "esp8266_sdk"
 ```
 
-Then in your Nim code:
+Then install dependencies without building:
+```bash
+nimble install -d
+```
+
+> [!IMPORTANT]
+> **Avoid `bin = @["application"]` in your `.nimble` file.**
+> Nimble's default builder tries to compile for your host PC (x86/ARM), which will fail for this SDK. Always use `nimble install -d` to just fetch dependencies, then use our `init.nims` to configure the cross-compiler.
+
+### 2. Initialization
+
+Run the setup script in your project root. This will generate a `config.nims` (build settings), `src/sdkconfig.h` (SDK defaults), and `nim.cfg` (IDE support):
+
+```bash
+nim e $(nimble path esp8266_sdk)/src/init.nims
+```
+
+The generated configuration automatically:
+- **Configures Cross-Compilation**: CPU, OS, and toolchain paths.
+- **Sets Architecture Flags**: `-mlongcalls`, `-mtext-section-literals`, etc.
+- **Links SDK Libraries**: Net80211, PP, PHY, HAL, and Core.
+- **Manages Linker Scripts**: Handles the complex ESP8266 memory layout.
+- **Handles Configuration**: Uses your `src/sdkconfig.h` or falls back to a library default.
+- **Adds Tasks**: Provides `nim flash` and `nim setup` (for IDE support).
+
+### 3. Write and Build
+
+Create your main entry point (e.g., `src/main.nim`):
+
 ```nim
 import esp8266_sdk
 
@@ -48,20 +59,26 @@ proc app_main*() {.exportc.} =
   echo "Hello from Nim on ESP8266!"
 ```
 
-## Structure
-
-- `src/`: Nim source files and C stubs.
-- `vendor/`: The original ESP8266_RTOS_SDK.
-- `examples/`: Example applications.
-
-## Building the Example
+Compile and flash to your device:
 
 ```bash
-cd examples/test_app
-nim c main.nim
-# To flash:
+# Compile
+nim c src/main.nim
+
+# Flash (requires esptool.py, usually handled by the helper)
 nim flash
 ```
+
+---
+
+## Features
+
+The library provides Nim bindings and build automation for:
+- **Build System**: Automated toolchain and SDK path detection.
+- **RTOS**: FreeRTOS tasks, queues, and semaphores.
+- **Networking**: Wi-Fi (Station/AP), LwIP (TCP/IP), and mDNS.
+- **Storage**: NVS and Flash storage.
+- **Hardware**: Timers and GPIO.
 
 ## Maintenance
 

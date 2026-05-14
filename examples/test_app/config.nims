@@ -2,10 +2,8 @@
 import os, strutils
 
 # Include the centralized library configuration
-# When using as a dependency:
-# const sdkPath = gorge("nimble path esp8266_sdk").strip()
-# if sdkPath != "":
-#   include sdkPath / "src/config_helper.nims"
+# To set up or update this project, run:
+# nim e $(nimble path esp8266_sdk)/src/init.nims
 
 # For local examples in this repo:
-include "../../src/config_helper.nims"
+include "../../src/config_helper.nim"
