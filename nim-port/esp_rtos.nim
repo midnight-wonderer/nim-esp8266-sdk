@@ -1,5 +1,6 @@
 import os
 import nvs
+import timer
 
 const sdkBase = "/storage/projects/ESP8266_RTOS_SDK"
 const portBase = currentSourcePath().parentDir()
