@@ -47,13 +47,13 @@ nim flash
 
 ## Maintenance
 
-Since this library vendors the original SDK and its components as plain files (submodules removed for simplicity), you can use the provided `justfile` to update them:
+Since this library vendors the original SDK and its components as plain files (submodules removed for simplicity), you can use the provided `justfile` to update to the latest stable release (`release/v3.4`):
 
 ```bash
-just update-all      # Update everything
-just update-sdk      # Update only the main SDK
-just update-lwip     # Update only LwIP
+just update-all      # Update SDK and all sub-components to stable release
 ```
+
+This command clones the SDK recursively to ensure all components (LwIP, mbedTLS, etc.) are at the exact versions verified by Espressif for the stable branch.
 
 Alternatively, you can manually check the following upstream repositories:
 
