@@ -23,7 +23,7 @@ const
   NVS_PARTITION_OFFSET = 0x9000.uint32
   NVS_PARTITION_SIZE = 0x6000.uint32 # 24 KB
   PAGE_SIZE = 4096.uint32
-  NUM_PAGES = NVS_PARTITION_SIZE div PAGE_SIZE
+  NUM_PAGES = (NVS_PARTITION_SIZE div PAGE_SIZE).int
   ENTRY_SIZE = 32.uint32
   ENTRIES_PER_PAGE = 126
   ENTRY_TABLE_OFFSET = 32.uint32
@@ -70,6 +70,9 @@ type
     reserved*: array[19, uint8]
     crc32*: uint32
 
+proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: pointer, length: uint32, chunkIndex: uint8 = 0xff): esp_err_t
+proc compactPage(srcIdx: int, destIdx: int, nextSeq: uint32): esp_err_t
+
 proc calculateCrc32(item: var Item): uint32 =
   var res = 0xffffffff.uint32
   res = crc32_le(res, addr item.nsIndex, 4)
@@ -114,9 +117,9 @@ proc findActivePage(): (int, uint32) =
     if header.state == PS_ACTIVE:
       if header.seqNumber >= maxSeq:
         maxSeq = header.seqNumber
-        activeIdx = i
+        activeIdx = i.int
     elif header.state == PS_UNINITIALIZED and firstUninit == -1:
-      firstUninit = i
+      firstUninit = i.int
       
   if activeIdx != -1:
     return (activeIdx, maxSeq)
@@ -292,6 +295,13 @@ proc compactPage(srcIdx: int, destIdx: int, nextSeq: uint32): esp_err_t =
   var uninit = PS_UNINITIALIZED.uint32
   discard spi_flash_write(wordAddr, addr uninit, 4)
   return ESP_OK
+
+proc nvs_flash_init*(): esp_err_t {.exportc.} =
+  var (pageIdx, _) = findActivePage()
+  if pageIdx == -1: return initializePage(0, 1)
+  return ESP_OK
+
+proc nvs_flash_deinit*(): esp_err_t {.exportc.} = ESP_OK
 
 proc nvs_open*(name: cstring, mode: int32, handle: ptr nvs_handle_t): esp_err_t {.exportc.} =
   let nameStr = $name
