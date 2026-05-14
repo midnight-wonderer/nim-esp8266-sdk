@@ -1,4 +1,5 @@
 import os
+import nvs
 
 const sdkBase = "/storage/projects/ESP8266_RTOS_SDK"
 const portBase = currentSourcePath().parentDir()

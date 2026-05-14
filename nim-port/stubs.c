@@ -111,40 +111,7 @@ int pthread_key_create(uint32_t *key, void (*destructor)(void*)) {
     return 0;
 }
 
-// NVS stubs - More functional for Wi-Fi
-int nvs_open(const char* name, int mode, uint32_t* handle) {
-    if (strcmp(name, "phy") == 0) {
-        *handle = 0x1234; // Fake handle for PHY
-        return 0;
-    }
-    return -1;
-}
-void nvs_close(uint32_t handle) {}
-esp_err_t nvs_flash_init(void) { return 0; }
-int nvs_set_u8(uint32_t handle, const char* key, uint8_t value) { return 0; }
-int nvs_get_u8(uint32_t handle, const char* key, uint8_t* value) { return -1; }
-int nvs_set_i8(uint32_t handle, const char* key, int8_t value) { return 0; }
-int nvs_get_i8(uint32_t handle, const char* key, int8_t* value) { return -1; }
-int nvs_get_u16(uint32_t handle, const char* key, uint16_t* value) { return -1; }
-int nvs_set_u16(uint32_t handle, const char* key, uint16_t value) { return 0; }
-int nvs_get_blob(uint32_t handle, const char* key, void* out_value, size_t* length) {
-    if (handle == 0x1234 && strcmp(key, "cal_data") == 0) {
-        // The Wi-Fi driver wants 128 bytes of PHY data.
-        // If we return -1, it might use defaults, which is what we want.
-        // But if it CRASHES, we might need to provide a real zeroed buffer.
-        if (out_value == NULL) {
-            *length = 128;
-            return 0;
-        }
-        if (*length >= 128) {
-            memset(out_value, 0, 128);
-            return 0;
-        }
-    }
-    return -1;
-}
-int nvs_set_blob(uint32_t handle, const char* key, const void* value, size_t length) { return 0; }
-int nvs_commit(uint32_t handle) { return 0; }
+// NVS is now implemented in Nim (nvs.nim)
 
 void pp_soft_wdt_stop(void) {}
 void pp_soft_wdt_restart(void) {}
