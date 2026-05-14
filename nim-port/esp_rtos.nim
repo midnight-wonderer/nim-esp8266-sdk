@@ -37,6 +37,10 @@ const portBase = currentSourcePath().parentDir()
 {.passC: "-I" & sdkBase / "components/spi_flash/include".}
 {.passC: "-I" & sdkBase / "components/mdns/include".}
 {.passC: "-I" & sdkBase / "components/mdns/private_include".}
+{.passC: "-I" & sdkBase / "components/pthread/include".}
+{.passC: "-I" & sdkBase / "components/pthread".}
+{.passC: "-I" & sdkBase / "components/esp_ringbuf/include".}
+{.passC: "-I" & sdkBase / "components/esp_ringbuf/include/freertos".}
 
 # Xtensa specific flags
 {.passC: "-mlongcalls -mtext-section-literals".}
@@ -58,8 +62,21 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1-pbkdf2.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-omac1.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1.c".}
+{.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1-internal.c".}
 {.compile: sdkBase / "components/wpa_supplicant/port/os_xtensa.c".}
 {.compile: "stubs.c".}
+{.compile: sdkBase / "components/esp8266/source/chip_boot.c".}
+{.compile: sdkBase / "components/esp8266/source/backtrace.c".}
+{.compile: sdkBase / "components/esp8266/source/reset_reason.c".}
+{.compile: sdkBase / "components/esp8266/driver/uart.c".}
+{.compile: sdkBase / "components/newlib/src/reent_init.c".}
+{.compile: sdkBase / "components/vfs/vfs.c".}
+{.compile: sdkBase / "components/vfs/vfs_uart.c".}
+{.compile: sdkBase / "components/pthread/pthread.c".}
+{.compile: sdkBase / "components/pthread/pthread_local_storage.c".}
+{.compile: sdkBase / "components/pthread/pthread_cond_var.c".}
+{.compile: sdkBase / "components/freertos/port/esp8266/panic.c".}
+{.compile: sdkBase / "components/esp_ringbuf/ringbuf.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi_os_adapter.c".}
 {.compile: sdkBase / "components/esp8266/source/ets_printf.c".}
