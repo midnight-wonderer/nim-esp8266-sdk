@@ -1,7 +1,6 @@
-# esp_rtos.nim
 import os
 
-const sdkBase = currentSourcePath().parentDir().parentDir()
+const sdkBase = "/storage/projects/ESP8266_RTOS_SDK"
 const portBase = currentSourcePath().parentDir()
 
 # Compiler Flags
@@ -34,6 +33,13 @@ const portBase = currentSourcePath().parentDir()
 {.passC: "-I" & sdkBase / "components/esp_event/private_include".}
 {.passC: "-I" & sdkBase / "components/nvs_flash/include".}
 {.passC: "-I" & sdkBase / "components/spi_flash/include".}
+{.passC: "-I" & sdkBase / "components/mdns/include".}
+{.passC: "-I" & sdkBase / "components/mdns/private_include".}
+
+# Xtensa specific flags
+{.passC: "-mlongcalls -mtext-section-literals".}
+{.passC: "-DICACHE_FLASH".}
+{.passC: "-fstrict-volatile-bitfields".}
 
 # Linker Libs
 {.passL: "-L" & sdkBase / "components/esp8266/lib".}
@@ -51,7 +57,7 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/aes-omac1.c".}
 {.compile: sdkBase / "components/wpa_supplicant/src/crypto/sha1.c".}
 {.compile: sdkBase / "components/wpa_supplicant/port/os_xtensa.c".}
-{.compile: portBase / "stubs.c".}
+{.compile: "stubs.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi.c".}
 {.compile: sdkBase / "components/esp8266/source/esp_wifi_os_adapter.c".}
 {.compile: sdkBase / "components/esp8266/source/ets_printf.c".}
@@ -72,105 +78,102 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "components/freertos/port/esp8266/xtensa_context.S".}
 {.compile: sdkBase / "components/freertos/port/esp8266/xtensa_vectors.S".}
 
-# LwIP (minimal set for TCP server)
+# LwIP (minimal set for mDNS + TCP server)
 {.compile: sdkBase / "components/lwip/lwip/src/core/tcp.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/tcp_in.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/tcp_out.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/ip4.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/ip4_addr.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/udp.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/pbuf.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/netif.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/timeouts.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/init.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/mem.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ip.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/ipv6/ip6.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/sockets.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/tcpip.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/core/ipv4/ip4_frag.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/def.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/raw.c".}
+{.compile: sdkBase / "components/lwip/lwip/src/core/memp.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/api_lib.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/api_msg.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/netbuf.c".}
 {.compile: sdkBase / "components/lwip/lwip/src/api/err.c".}
+{.compile: "mdns.c".}
+{.compile: "mdns_networking.c".}
 {.compile: sdkBase / "components/lwip/port/esp8266/freertos/sys_arch.c".}
 
-# For a library, we want to expose types and procs
 type
   esp_err_t* = int32
-  socklen_t* = uint32
+  wifi_mode_t* = enum
+    WIFI_MODE_NULL = 0, WIFI_MODE_STA, WIFI_MODE_AP, WIFI_MODE_APSTA
 
 const
-  ESP_OK* = 0
-  AF_INET* = 2
-  SOCK_STREAM* = 1
-  IPPROTO_IP* = 0
-  IPPROTO_TCP* = 6
-  INADDR_ANY* = 0
-
-type
-  sockaddr* {.importc: "struct sockaddr", header: "lwip/sockets.h".} = object
-  
-  in_addr* {.importc: "struct in_addr", header: "lwip/sockets.h".} = object
-    s_addr*: uint32
-
-  sockaddr_in* {.importc: "struct sockaddr_in", header: "lwip/sockets.h".} = object
-    sin_len*: uint8
-    sin_family*: uint8
-    sin_port*: uint16
-    sin_addr*: in_addr
-    sin_zero*: array[8, char]
-
-proc vTaskDelay*(xTicksToDelay: uint32) {.importc, header: "freertos/FreeRTOS.h".}
-
-# Wi-Fi
-type
-  wifi_init_config_t* {.importc: "wifi_init_config_t", header: "esp_wifi.h".} = object
-    event_handler*: pointer
-    osi_funcs*: pointer
-    qos_enable*: uint8
-    ampdu_rx_enable*: uint8
-    rx_ba_win*: uint8
-    rx_ampdu_buf_num*: uint8
-    rx_ampdu_buf_len*: uint32
-    rx_max_single_pkt_len*: uint32
-    rx_buf_len*: uint32
-    amsdu_rx_enable*: uint8
-    rx_buf_num*: uint8
-    rx_pkt_num*: uint8
-    left_continuous_rx_buf_num*: uint8
-    tx_buf_num*: uint8
-    nvs_enable*: uint8
-    nano_enable*: uint8
-    wpa3_sae_enable*: uint8
-    magic*: uint32
-
-proc esp_wifi_init*(config: ptr wifi_init_config_t): esp_err_t {.importc, header: "esp_wifi.h".}
-
-proc esp_wifi_set_mode*(mode: int32): esp_err_t {.importc, header: "esp_wifi.h".}
-proc esp_wifi_start*(): esp_err_t {.importc, header: "esp_wifi.h".}
-proc esp_wifi_connect*(): esp_err_t {.importc, header: "esp_wifi.h".}
+  WIFI_IF_STA* = 0
+  WIFI_IF_AP* = 1
 
 type
   wifi_sta_config_t* {.importc: "wifi_sta_config_t", header: "esp_wifi.h".} = object
-    ssid*: array[32, uint8]
-    password*: array[64, uint8]
-    # ignoring other fields for now as they default to 0
+    ssid*: array[32, byte]
+    password*: array[64, byte]
+
+  wifi_init_config_t* {.importc: "wifi_init_config_t", header: "esp_wifi.h".} = object
+    rx_buf_num*: uint8
+    rx_pkt_num*: uint8
+    tx_buf_num*: uint8
+    nvs_enable*: uint8
+    magic*: uint32
 
   wifi_config_t* {.importc: "wifi_config_t", header: "esp_wifi.h", union.} = object
     sta*: wifi_sta_config_t
 
-proc esp_wifi_set_config*(interface_id: int32, config: ptr wifi_config_t): esp_err_t {.importc, header: "esp_wifi.h".}
+proc esp_wifi_init*(config: ptr wifi_init_config_t): esp_err_t {.importc: "esp_wifi_init", header: "esp_wifi.h".}
+proc esp_wifi_set_mode*(mode: wifi_mode_t): esp_err_t {.importc: "esp_wifi_set_mode", header: "esp_wifi.h".}
+proc esp_wifi_set_config*(interface_id: int, config: ptr wifi_config_t): esp_err_t {.importc: "esp_wifi_set_config", header: "esp_wifi.h".}
+proc esp_wifi_start*(): esp_err_t {.importc: "esp_wifi_start", header: "esp_wifi.h".}
+proc esp_wifi_connect*(): esp_err_t {.importc: "esp_wifi_connect", header: "esp_wifi.h".}
+
+proc tcpip_adapter_init*() {.importc: "tcpip_adapter_init", header: "tcpip_adapter.h".}
+proc esp_event_loop_create_default*(): esp_err_t {.importc: "esp_event_loop_create_default", header: "esp_event.h".}
+
+proc mdns_init*(): esp_err_t {.importc: "mdns_init", header: "mdns.h".}
+proc mdns_hostname_set*(hostname: cstring): esp_err_t {.importc: "mdns_hostname_set", header: "mdns.h".}
+proc mdns_instance_name_set*(instance_name: cstring): esp_err_t {.importc: "mdns_instance_name_set", header: "mdns.h".}
+proc mdns_service_add*(instance_name: cstring, service_type: cstring, proto: cstring, port: uint16, txt: pointer, num_items: int): esp_err_t {.importc: "mdns_service_add", header: "mdns.h".}
+
+# LwIP Socket API
+type
+  Socket* = int32
+  InAddr* {.importc: "struct in_addr", header: "lwip/sockets.h".} = object
+    s_addr*: uint32
+
+  SockAddrIn* {.importc: "struct sockaddr_in", header: "lwip/sockets.h".} = object
+    sin_len*: uint8
+    sin_family*: uint8
+    sin_port*: uint16
+    sin_addr*: InAddr
+    sin_zero*: array[8, char]
 
 const
-  WIFI_IF_STA* = 0
-  WIFI_MODE_STA* = 1
+  AF_INET* = 2
+  SOCK_STREAM* = 1
+  IPPROTO_IP* = 0
+  INADDR_ANY* = 0
 
+proc socket*(domain: int32, stype: int32, protocol: int32): Socket {.importc: "lwip_socket", header: "lwip/sockets.h".}
+proc `bind`*(s: Socket, name: ptr SockAddrIn, namelen: uint32): int32 {.importc: "lwip_bind", header: "lwip/sockets.h".}
+proc listen*(s: Socket, backlog: int32): int32 {.importc: "lwip_listen", header: "lwip/sockets.h".}
+proc accept*(s: Socket, address: pointer, addrlen: pointer): Socket {.importc: "lwip_accept", header: "lwip/sockets.h".}
+proc recv*(s: Socket, mem: pointer, len: int, flags: int32): int {.importc: "lwip_recv", header: "lwip/sockets.h".}
+proc send*(s: Socket, data: pointer, len: int, flags: int32): int {.importc: "lwip_send", header: "lwip/sockets.h".}
+proc close*(s: Socket): int32 {.importc: "lwip_close", header: "lwip/sockets.h".}
+proc htons*(x: uint16): uint16 {.importc: "lwip_htons", header: "lwip/def.h".}
 
-# Sockets
-proc lwip_socket*(domain, socketType, protocol: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_bind*(s: int32, name: ptr sockaddr, namelen: uint32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_listen*(s: int32, backlog: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_accept*(s: int32, addr_ptr: ptr sockaddr, addrlen: ptr uint32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_recv*(s: int32, mem: pointer, len: uint32, flags: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_send*(s: int32, dataptr: pointer, size: uint32, flags: int32): int32 {.importc, header: "lwip/sockets.h".}
-proc lwip_close*(s: int32): int32 {.importc, header: "lwip/sockets.h".}
+template WIFI_INIT_CONFIG_DEFAULT*(): wifi_init_config_t =
+  var config: wifi_init_config_t
+  config
 
-# Helper for htons
-proc htons*(hostshort: uint16): uint16 =
-  return (hostshort shl 8) or (hostshort shr 8)
+proc vTaskDelay*(ticks: uint32) {.importc: "vTaskDelay", header: "freertos/FreeRTOS.h".}

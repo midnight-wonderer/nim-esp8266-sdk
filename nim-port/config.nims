@@ -27,6 +27,7 @@ switch("passC", "-fstrict-volatile-bitfields")
 switch("passC", "-ffunction-sections")
 switch("passC", "-fdata-sections")
 switch("passC", "-DCONFIG_IEEE80211W")
+switch("passC", "-DLWIP_IPV6=1")
 switch("passC", "-include sdkconfig.h")
 
 # Linker flags

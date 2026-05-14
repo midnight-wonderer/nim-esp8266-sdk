@@ -1,5 +1,6 @@
 # test.nim
 import esp_rtos, strutils
+{.passC: "-include fix_mdns.h".}
 
 # These can be set via -d:WIFI_SSID="name" and -d:WIFI_PASS="pass"
 const SSID {.strdefine.} = "YOUR_SSID_HERE"
@@ -18,64 +19,63 @@ proc app_main*() {.exportc.} =
 
   discard esp_wifi_init(addr init_cfg)
   discard esp_wifi_set_mode(WIFI_MODE_STA)
-
-  var wifi_cfg: wifi_config_t
   
-  # Copy strings to array[uint8]
-  for i, c in SSID:
-    if i < 31: wifi_cfg.sta.ssid[i] = uint8(c)
-  for i, c in PASS:
-    if i < 63: wifi_cfg.sta.password[i] = uint8(c)
-
+  var wifi_cfg: wifi_config_t
+  # Copy SSID and PASS
+  for i, c in SSID: wifi_cfg.sta.ssid[i] = byte(c)
+  for i, c in PASS: wifi_cfg.sta.password[i] = byte(c)
+  
   discard esp_wifi_set_config(WIFI_IF_STA, addr wifi_cfg)
+  
+  # Start Wi-Fi
   discard esp_wifi_start()
   
-  echo "Connecting to: ", SSID
-  discard esp_wifi_connect()
+  # Init TCP/IP
+  tcpip_adapter_init()
+  
+  # Setup mDNS
+  echo "Starting mDNS..."
+  discard mdns_init()
+  discard mdns_hostname_set("nim-esp")
+  discard mdns_instance_name_set("Nim ESP8266 Server")
+  
+  # Register our TCP server as a service
+  discard mdns_service_add(nil, "_http", "_tcp", 8080, nil, 0)
   
   echo "Connect call issued. Waiting 10s for IP..."
   vTaskDelay(10000) # Wait for connection/IP (simple approach)
 
-  let server_sock = lwip_socket(AF_INET, SOCK_STREAM, IPPROTO_IP)
+  let server_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP)
   if server_sock < 0:
     echo "Failed to create socket!"
     return
 
-  var addr_in: sockaddr_in
+  var addr_in: SockAddrIn
   addr_in.sin_family = uint8(AF_INET)
   addr_in.sin_port = htons(8080)
   addr_in.sin_addr.s_addr = uint32(INADDR_ANY)
 
-  if lwip_bind(server_sock, cast[ptr sockaddr](addr addr_in), uint32(sizeof(sockaddr_in))) < 0:
+  if `bind`(server_sock, addr addr_in, uint32(sizeof(SockAddrIn))) < 0:
     echo "Bind failed!"
     return
 
-  if lwip_listen(server_sock, 5) < 0:
+  if listen(server_sock, 5) < 0:
     echo "Listen failed!"
     return
 
   echo "TCP Server listening on port 8080..."
 
   while true:
-    var client_addr: sockaddr
-    var addr_len: uint32 = uint32(sizeof(sockaddr))
-    let client_sock = lwip_accept(server_sock, addr client_addr, addr addr_len)
-    
+    var client_sock = accept(server_sock, nil, nil)
     if client_sock >= 0:
-      echo "Client connected!"
-      var buf: array[64, char]
-      let bytes_rx = lwip_recv(client_sock, addr buf, 63, 0)
-      
-      if bytes_rx > 0:
-        buf[bytes_rx] = '\0' # Null terminate
-        let msg = $cast[cstring](addr buf)
-        echo "Received: ", msg
-        
-        # Logic: If 'hello', respond 'world'. Discard if too long (already limited by 64)
+      echo "New client connected!"
+      var buffer: array[128, char]
+      let bytes_received = recv(client_sock, addr buffer, buffer.len, 0)
+      if bytes_received > 0:
+        let msg = cast[string](buffer[0..<bytes_received])
         if msg.startsWith("hello"):
-          let resp = "world\n"
-          discard lwip_send(client_sock, cast[pointer](resp.cstring), uint32(resp.len), 0)
+          discard send(client_sock, cstring("world\n"), 6, 0)
       
-      discard lwip_close(client_sock)
-      echo "Client disconnected."
-
+      discard close(client_sock)
+    
+    vTaskDelay(100)
