@@ -20,11 +20,13 @@ proc spi_flash_erase_sector*(sector: uint32): esp_err_t {.importc, header: "spi_
 proc crc32_le*(crc: uint32, buf: pointer, len: uint32): uint32 {.importc, header: "esp_crc.h".}
 
 const
-  NVS_PARTITION_OFFSET = 0x9000.uint32
-  NVS_PARTITION_SIZE = 0x6000.uint32 # 24 KB
+  NVS_PARTITION_OFFSET = 0x100000.uint32 # Move to 1MB mark
+  NVS_PARTITION_SIZE = 0x8000.uint32    # 32 KB (8 sectors)
   PAGE_SIZE = 4096.uint32
   NUM_PAGES = (NVS_PARTITION_SIZE div PAGE_SIZE).int
   ENTRY_SIZE = 32.uint32
+
+template alignDown(n: uint32, a: uint32): uint32 = (n div a) * a
   ENTRIES_PER_PAGE = 126
   ENTRY_TABLE_OFFSET = 32.uint32
   ENTRY_DATA_OFFSET = 64.uint32
@@ -67,8 +69,41 @@ type
     state*: PageState
     seqNumber*: uint32
     version*: uint8
-    reserved*: array[19, uint8]
+    dirty*: uint32           # 0xFFFFFFFF = Clean, 0 = Dirty (contains erased items)
+    reserved*: array[15, uint8]
     crc32*: uint32
+
+type
+  CacheEntry = object
+    hash: uint16
+    addr: uint32
+
+var cacheTable: array[64, CacheEntry]
+
+proc calculateKeyHash(nsIndex: uint8, key: string): uint16 =
+  if key.len == 0: return 0
+  var h = crc32_le(0xffffffff.uint32, addr nsIndex, 1)
+  h = crc32_le(h, addr key[0], key.len.uint32)
+  return (h shr 16).uint16
+
+proc updateCache(nsIndex: uint8, key: string, addr: uint32) =
+  let h = calculateKeyHash(nsIndex, key)
+  let idx = h mod 64
+  cacheTable[idx].hash = h
+  cacheTable[idx].addr = addr
+
+proc invalidateCache(nsIndex: uint8, key: string) =
+  let h = calculateKeyHash(nsIndex, key)
+  let idx = h mod 64
+  if cacheTable[idx].hash == h:
+    cacheTable[idx].addr = 0
+
+proc getFromCache(nsIndex: uint8, key: string): uint32 =
+  let h = calculateKeyHash(nsIndex, key)
+  let idx = h mod 64
+  if cacheTable[idx].hash == h:
+    return cacheTable[idx].addr
+  return 0
 
 proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: pointer, length: uint32, chunkIndex: uint8 = 0xff): esp_err_t
 proc compactPage(srcIdx: int, destIdx: int, nextSeq: uint32): esp_err_t
@@ -134,7 +169,8 @@ proc initializePage(pageIdx: int, seqNumber: uint32): esp_err_t =
   header.state = PS_ACTIVE
   header.seqNumber = seqNumber
   header.version = 0xfe
-  for i in 0..<19: header.reserved[i] = 0xff
+  header.dirty = 0xffffffff.uint32 # Clean
+  for i in 0..<15: header.reserved[i] = 0xff
   header.crc32 = calculateCrc32(header)
   
   discard spi_flash_write(pageAddr, addr header, sizeof(header).uint32)
@@ -156,7 +192,25 @@ proc markPageFull(pageIdx: int): esp_err_t =
   discard spi_flash_write(pageAddr, addr header.state, 4)
   return ESP_OK
 
+proc markPageDirty(pageAddr: uint32) =
+  var dirtyVal: uint32 = 0
+  # Offset of 'dirty' field in PageHeader is 9
+  discard spi_flash_write(pageAddr + 9, addr dirtyVal, 4)
+
 proc findItem(nsIndex: uint8, datatype: uint8, key: string, chunkIndex: uint8 = 0xff): (esp_err_t, Item, uint32, int) =
+  # Try cache first
+  let cachedAddr = getFromCache(nsIndex, key)
+  if cachedAddr != 0:
+    var item: Item
+    discard spi_flash_read(cachedAddr, addr item, sizeof(item).uint32)
+    # Double check it's actually the right one (CRC check included in logic below anyway)
+    if item.nsIndex == nsIndex:
+       var itemKey = ""
+       for c in item.key: (if c == '\0': break; itemKey.add(c))
+       if itemKey == key and (datatype == T_ANY.uint8 or item.datatype == datatype):
+          if chunkIndex == 0xfe or item.chunkIndex == chunkIndex:
+            return (ESP_OK, item, alignDown(cachedAddr - ENTRY_DATA_OFFSET, PAGE_SIZE), ((cachedAddr - ENTRY_DATA_OFFSET) mod PAGE_SIZE).int div ENTRY_SIZE.int)
+
   # Scan all pages to find the item
   for pageIdx in 0..<NUM_PAGES:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
@@ -176,7 +230,9 @@ proc findItem(nsIndex: uint8, datatype: uint8, key: string, chunkIndex: uint8 = 
           for c in item.key: (if c == '\0': break; itemKey.add(c))
           if itemKey == key:
             if chunkIndex != 0xfe and item.chunkIndex != chunkIndex: continue
-            if datatype == T_ANY.uint8 or item.datatype == datatype: return (ESP_OK, item, pageAddr, entryIdx)
+            if datatype == T_ANY.uint8 or item.datatype == datatype:
+              updateCache(nsIndex, key, itemAddr) # Cache it
+              return (ESP_OK, item, pageAddr, entryIdx)
             else: return (ESP_ERR_NVS_TYPE_MISMATCH, item, pageAddr, entryIdx)
   return (ESP_ERR_NVS_NOT_FOUND, Item(), 0, 0)
 
@@ -206,6 +262,8 @@ proc eraseOldItem(nsIndex: uint8, datatype: uint8, key: string) =
              for s in 0..<item.span.int: setEntryState(entryTable, entryIdx + s, ES_ERASED)
              modified = true
     if modified:
+      markPageDirty(pageAddr)
+      invalidateCache(nsIndex, key)
       for w in 0..<8:
         let wordAddr = pageAddr + ENTRY_TABLE_OFFSET + (w.uint32 * 4)
         let wordData = cast[ptr array[8, uint32]](addr entryTable)[w]
@@ -267,29 +325,35 @@ proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: pointer, leng
     let wordAddr = pageAddr + ENTRY_TABLE_OFFSET + (w.uint32 * 4)
     let wordData = cast[ptr array[8, uint32]](addr entryTable)[w]
     discard spi_flash_write(wordAddr, addr wordData, 4)
+  updateCache(nsIndex, key, itemAddr)
   return ESP_OK
 
 proc compactPage(srcIdx: int, destIdx: int, nextSeq: uint32): esp_err_t =
   let srcAddr = NVS_PARTITION_OFFSET + (srcIdx.uint32 * PAGE_SIZE)
-  discard initializePage(destIdx, nextSeq)
-  
   var entryTable: array[32, uint8]
   discard spi_flash_read(srcAddr + ENTRY_TABLE_OFFSET, addr entryTable, 32)
   
-  for i in 0..<ENTRIES_PER_PAGE:
-    if getEntryState(entryTable, i) == ES_WRITTEN:
-      var item: Item
-      let itemAddr = srcAddr + ENTRY_DATA_OFFSET + (i.uint32 * ENTRY_SIZE)
-      discard spi_flash_read(itemAddr, addr item, sizeof(item).uint32)
-      
-      if item.span == 1:
-        discard writeItem(item.nsIndex, item.datatype, $cast[cstring](addr item.key[0]), addr item.data[0], 8, item.chunkIndex)
-      else:
-        let totalLen = 8.uint32 + (item.span.uint32 - 1) * 32
-        var buf = newSeq[uint8](totalLen)
-        copyMem(addr buf[0], addr item.data[0], 8)
-        discard spi_flash_read(itemAddr + 32, addr buf[8], totalLen - 8)
-        discard writeItem(item.nsIndex, item.datatype, $cast[cstring](addr item.key[0]), addr buf[0], totalLen, item.chunkIndex)
+  var header: PageHeader; discard spi_flash_read(srcAddr, addr header, sizeof(header).uint32)
+  if header.dirty == 0xffffffff.uint32:
+    # Page is clean, just initialize dest to maintain sequence and wipe src
+    discard initializePage(destIdx, nextSeq)
+  else:
+    # Page is dirty, move all active items to dest
+    discard initializePage(destIdx, nextSeq)
+    for i in 0..<ENTRIES_PER_PAGE:
+      if getEntryState(entryTable, i) == ES_WRITTEN:
+        var item: Item
+        let itemAddr = srcAddr + ENTRY_DATA_OFFSET + (i.uint32 * ENTRY_SIZE)
+        discard spi_flash_read(itemAddr, addr item, sizeof(item).uint32)
+        
+        if item.span == 1:
+          discard writeItem(item.nsIndex, item.datatype, $cast[cstring](addr item.key[0]), addr item.data[0], 8, item.chunkIndex)
+        else:
+          let totalLen = 8.uint32 + (item.span.uint32 - 1) * 32
+          var buf = newSeq[uint8](totalLen)
+          copyMem(addr buf[0], addr item.data[0], 8)
+          discard spi_flash_read(itemAddr + 32, addr buf[8], totalLen - 8)
+          discard writeItem(item.nsIndex, item.datatype, $cast[cstring](addr item.key[0]), addr buf[0], totalLen, item.chunkIndex)
         
   let wordAddr = srcAddr
   var uninit = PS_UNINITIALIZED.uint32

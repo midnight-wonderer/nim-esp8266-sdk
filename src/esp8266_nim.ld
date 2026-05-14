@@ -135,4 +135,12 @@ SECTIONS
     . = ALIGN(4);
     _rodata_end = ABSOLUTE(.);
   } > iram0_2_seg : iram0_2_phdr
+
+  /* Reserve NVS space at 1MB mark */
+  _nvs_base = 0x100000;
+  _nvs_len  = 0x8000;
+  .nvs_reserved _nvs_base (NOLOAD) :
+  {
+    . = . + _nvs_len;
+  }
 }
