@@ -40,6 +40,8 @@ let cfgContent = """
 --os:any
 --mm:arc
 --threads:off
+--gcc.exe:xtensa-lx106-elf-gcc
+--gcc.linkerexe:xtensa-lx106-elf-gcc
 --define:noSignalHandler
 --define:dynlibOverrideAll
 --define:useMalloc

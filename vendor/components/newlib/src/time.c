@@ -71,6 +71,7 @@ static inline uint64_t get_boot_time()
     return result;
 }
 
+#if defined(WITH_RTC) || defined(WITH_FRC)
 // This function gradually changes boot_time to the correction value and immediately updates it.
 static uint64_t adjust_boot_time(void)
 {
@@ -109,6 +110,8 @@ static uint64_t adjust_boot_time(void)
     }
     return boot_time;
 }
+#endif
+
 
 #if defined( WITH_FRC ) || defined( WITH_RTC )
 static uint64_t get_time_since_boot(void)
