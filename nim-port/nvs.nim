@@ -99,30 +99,20 @@ proc findItem(nsIndex: uint8, datatype: uint8, key: string): (esp_err_t, Item, u
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     var header: PageHeader
     discard spi_flash_read(pageAddr, addr header, sizeof(header).uint32)
-    
     if header.state == PS_UNINITIALIZED: continue
-    
     var entryTable: array[32, uint8]
     discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr entryTable, sizeof(entryTable).uint32)
-    
     for entryIdx in 0..<ENTRIES_PER_PAGE:
       if getEntryState(entryTable, entryIdx) == ES_WRITTEN:
         var item: Item
         let itemAddr = pageAddr + ENTRY_DATA_OFFSET + (entryIdx.uint32 * ENTRY_SIZE)
         discard spi_flash_read(itemAddr, addr item, sizeof(item).uint32)
-        
         if item.nsIndex == nsIndex:
           var itemKey = ""
-          for c in item.key:
-            if c == '\0': break
-            itemKey.add(c)
-          
+          for c in item.key: (if c == '\0': break; itemKey.add(c))
           if itemKey == key:
-            if datatype == T_ANY.uint8 or item.datatype == datatype:
-              return (ESP_OK, item, pageAddr, entryIdx)
-            else:
-              return (ESP_ERR_NVS_TYPE_MISMATCH, item, pageAddr, entryIdx)
-              
+            if datatype == T_ANY.uint8 or item.datatype == datatype: return (ESP_OK, item, pageAddr, entryIdx)
+            else: return (ESP_ERR_NVS_TYPE_MISMATCH, item, pageAddr, entryIdx)
   return (ESP_ERR_NVS_NOT_FOUND, Item(), 0, 0)
 
 proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint8]): esp_err_t =
@@ -130,54 +120,32 @@ proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint
   var targetEntryIdx = -1
   var targetPageHeader: PageHeader
   var targetEntryTable: array[32, uint8]
-
   for pageIdx in 0..<6:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     discard spi_flash_read(pageAddr, addr targetPageHeader, sizeof(targetPageHeader).uint32)
-    
     if targetPageHeader.state == PS_UNINITIALIZED:
-      targetPageHeader.state = PS_ACTIVE
-      targetPageHeader.seqNumber = 1
-      targetPageHeader.version = 0xfe
+      targetPageHeader.state = PS_ACTIVE; targetPageHeader.seqNumber = 1; targetPageHeader.version = 0xfe
       for i in 0..<19: targetPageHeader.reserved[i] = 0xff
       targetPageHeader.crc32 = calculateCrc32(targetPageHeader)
       discard spi_flash_write(pageAddr, addr targetPageHeader, sizeof(targetPageHeader).uint32)
       for i in 0..<32: targetEntryTable[i] = 0xff
       discard spi_flash_write(pageAddr + ENTRY_TABLE_OFFSET, addr targetEntryTable, 32)
-      targetPageAddr = pageAddr
-      targetEntryIdx = 0
-      break
-    
+      targetPageAddr = pageAddr; targetEntryIdx = 0; break
     if targetPageHeader.state == PS_ACTIVE:
       discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr targetEntryTable, 32)
-      for i in 0..<ENTRIES_PER_PAGE:
-        if getEntryState(targetEntryTable, i) == ES_EMPTY:
-          targetPageAddr = pageAddr
-          targetEntryIdx = i
-          break
+      for i in 0..<ENTRIES_PER_PAGE: (if getEntryState(targetEntryTable, i) == ES_EMPTY: (targetPageAddr = pageAddr; targetEntryIdx = i; break))
       if targetEntryIdx != -1: break
-
   if targetEntryIdx == -1: return ESP_ERR_NVS_NO_FREE_PAGES
-
   var item: Item
-  item.nsIndex = nsIndex
-  item.datatype = datatype
-  item.span = 1
-  item.chunkIndex = 0xff
+  item.nsIndex = nsIndex; item.datatype = datatype; item.span = 1; item.chunkIndex = 0xff
   for i in 0..<min(key.len, 15): item.key[i] = key[i]
-  item.key[min(key.len, 15)] = '\0'
-  item.data = data
-  item.crc32 = calculateCrc32(item)
-
+  item.key[min(key.len, 15)] = '\0'; item.data = data; item.crc32 = calculateCrc32(item)
   let itemAddr = targetPageAddr + ENTRY_DATA_OFFSET + (targetEntryIdx.uint32 * ENTRY_SIZE)
   discard spi_flash_write(itemAddr, addr item, sizeof(item).uint32)
-
   setEntryState(targetEntryTable, targetEntryIdx, ES_WRITTEN)
-  let wordIdx = targetEntryIdx div 4
-  let wordAddr = targetPageAddr + ENTRY_TABLE_OFFSET + (wordIdx.uint32 * 4)
+  let wordIdx = targetEntryIdx div 4; let wordAddr = targetPageAddr + ENTRY_TABLE_OFFSET + (wordIdx.uint32 * 4)
   let wordData = cast[ptr array[8, uint32]](addr targetEntryTable)[wordIdx]
-  discard spi_flash_write(wordAddr, addr wordData, 4)
-  return ESP_OK
+  discard spi_flash_write(wordAddr, addr wordData, 4); return ESP_OK
 
 proc eraseOldItem(nsIndex: uint8, datatype: uint8, key: string) =
   let (res, _, pageAddr, entryIdx) = findItem(nsIndex, datatype, key)
@@ -185,8 +153,7 @@ proc eraseOldItem(nsIndex: uint8, datatype: uint8, key: string) =
     var entryTable: array[32, uint8]
     discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr entryTable, 32)
     setEntryState(entryTable, entryIdx, ES_ERASED)
-    let wordIdx = entryIdx div 4
-    let wordAddr = pageAddr + ENTRY_TABLE_OFFSET + (wordIdx.uint32 * 4)
+    let wordIdx = entryIdx div 4; let wordAddr = pageAddr + ENTRY_TABLE_OFFSET + (wordIdx.uint32 * 4)
     let wordData = cast[ptr array[8, uint32]](addr entryTable)[wordIdx]
     discard spi_flash_write(wordAddr, addr wordData, 4)
 
@@ -195,21 +162,12 @@ proc nvs_flash_init*(): esp_err_t {.exportc.} =
 
 proc nvs_open*(name: cstring, mode: int32, handle: ptr nvs_handle_t): esp_err_t {.exportc.} =
   let nameStr = $name
-  if nameStr == "phy":
-    handle[] = 0x1234
-    return ESP_OK
+  if nameStr == "phy": (handle[] = 0x1234; return ESP_OK)
   let (res, item, _, _) = findItem(0, T_U8.uint8, nameStr)
-  if res == ESP_OK:
-    handle[] = item.data[0].uint32
-    return ESP_OK
-  let newId: uint8 = 10 
-  var d: array[8, uint8]
-  d[0] = newId
-  discard writeItem(0, T_U8.uint8, nameStr, d)
-  handle[] = newId.uint32
-  return ESP_OK
+  if res == ESP_OK: (handle[] = item.data[0].uint32; return ESP_OK)
+  let newId: uint8 = 10; var d: array[8, uint8]; d[0] = newId
+  discard writeItem(0, T_U8.uint8, nameStr, d); handle[] = newId.uint32; return ESP_OK
 
-# Standard Primitives
 proc nvs_get_u8*(handle: nvs_handle_t, key: cstring, out_value: ptr uint8): esp_err_t {.exportc.} =
   let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
   let (res, item, _, _) = findItem(nsIndex, T_U8.uint8, $key)
@@ -219,8 +177,7 @@ proc nvs_get_u8*(handle: nvs_handle_t, key: cstring, out_value: ptr uint8): esp_
 proc nvs_set_u8*(handle: nvs_handle_t, key: cstring, value: uint8): esp_err_t {.exportc.} =
   let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
   eraseOldItem(nsIndex, T_U8.uint8, $key)
-  var d: array[8, uint8]; d[0] = value
-  return writeItem(nsIndex, T_U8.uint8, $key, d)
+  var d: array[8, uint8]; d[0] = value; return writeItem(nsIndex, T_U8.uint8, $key, d)
 
 proc nvs_get_i8*(handle: nvs_handle_t, key: cstring, out_value: ptr int8): esp_err_t {.exportc.} =
   return nvs_get_u8(handle, key, cast[ptr uint8](out_value))
@@ -237,8 +194,7 @@ proc nvs_get_u16*(handle: nvs_handle_t, key: cstring, out_value: ptr uint16): es
 proc nvs_set_u16*(handle: nvs_handle_t, key: cstring, value: uint16): esp_err_t {.exportc.} =
   let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
   eraseOldItem(nsIndex, T_U16.uint8, $key)
-  var d: array[8, uint8]; copyMem(addr d[0], addr value, 2)
-  return writeItem(nsIndex, T_U16.uint8, $key, d)
+  var d: array[8, uint8]; copyMem(addr d[0], addr value, 2); return writeItem(nsIndex, T_U16.uint8, $key, d)
 
 proc nvs_get_i16*(handle: nvs_handle_t, key: cstring, out_value: ptr int16): esp_err_t {.exportc.} =
   return nvs_get_u16(handle, key, cast[ptr uint16](out_value))
@@ -255,8 +211,7 @@ proc nvs_get_u32*(handle: nvs_handle_t, key: cstring, out_value: ptr uint32): es
 proc nvs_set_u32*(handle: nvs_handle_t, key: cstring, value: uint32): esp_err_t {.exportc.} =
   let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
   eraseOldItem(nsIndex, T_U32.uint8, $key)
-  var d: array[8, uint8]; copyMem(addr d[0], addr value, 4)
-  return writeItem(nsIndex, T_U32.uint8, $key, d)
+  var d: array[8, uint8]; copyMem(addr d[0], addr value, 4); return writeItem(nsIndex, T_U32.uint8, $key, d)
 
 proc nvs_get_i32*(handle: nvs_handle_t, key: cstring, out_value: ptr int32): esp_err_t {.exportc.} =
   return nvs_get_u32(handle, key, cast[ptr uint32](out_value))
@@ -272,5 +227,21 @@ proc nvs_get_blob*(handle: nvs_handle_t, key: cstring, out_value: pointer, lengt
 
 proc nvs_close*(handle: nvs_handle_t) {.exportc.} = discard
 proc nvs_commit*(handle: nvs_handle_t): esp_err_t {.exportc.} = ESP_OK
-proc nvs_erase_key*(handle: nvs_handle_t, key: cstring): esp_err_t {.exportc.} = ESP_OK
-proc nvs_erase_all*(handle: nvs_handle_t): esp_err_t {.exportc.} = ESP_OK
+
+proc nvs_erase_key*(handle: nvs_handle_t, key: cstring): esp_err_t {.exportc.} =
+  let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
+  eraseOldItem(nsIndex, T_ANY.uint8, $key); return ESP_OK
+
+proc nvs_erase_all*(handle: nvs_handle_t): esp_err_t {.exportc.} =
+  let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
+  for pageIdx in 0..<6:
+    let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
+    var entryTable: array[32, uint8]; discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr entryTable, 32)
+    var modded = false
+    for entryIdx in 0..<ENTRIES_PER_PAGE:
+      if getEntryState(entryTable, entryIdx) == ES_WRITTEN:
+        var item: Item; let itemAddr = pageAddr + ENTRY_DATA_OFFSET + (entryIdx.uint32 * ENTRY_SIZE)
+        discard spi_flash_read(itemAddr, addr item, sizeof(item).uint32)
+        if item.nsIndex == nsIndex: (setEntryState(entryTable, entryIdx, ES_ERASED); modded = true)
+    if modded: (let p = cast[ptr array[8, uint32]](addr entryTable); for i in 0..<8: (let wa = pageAddr + ENTRY_TABLE_OFFSET + (i.uint32 * 4); var wd = p[i]; discard spi_flash_write(wa, addr wd, 4)))
+  return ESP_OK
