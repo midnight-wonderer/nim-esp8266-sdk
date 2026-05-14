@@ -1,6 +1,4 @@
-
-import os
-
+# NVS Implementation in Nim
 type
   esp_err_t* = int32
   nvs_handle_t* = uint32
@@ -23,8 +21,9 @@ proc crc32_le*(crc: uint32, buf: pointer, len: uint32): uint32 {.importc, header
 
 const
   NVS_PARTITION_OFFSET = 0x9000.uint32
-  NVS_PARTITION_SIZE = 0x6000.uint32 # 6 pages
+  NVS_PARTITION_SIZE = 0x6000.uint32 # 24 KB
   PAGE_SIZE = 4096.uint32
+  NUM_PAGES = NVS_PARTITION_SIZE div PAGE_SIZE
   ENTRY_SIZE = 32.uint32
   ENTRIES_PER_PAGE = 126
   ENTRY_TABLE_OFFSET = 32.uint32
@@ -95,7 +94,7 @@ proc setEntryState(table: var array[32, uint8], index: int, state: EntryState) =
   table[byteIdx] = (table[byteIdx] and not (0x3.uint8 shl bitShift)) or (state.uint8 shl bitShift)
 
 proc findItem(nsIndex: uint8, datatype: uint8, key: string): (esp_err_t, Item, uint32, int) =
-  for pageIdx in 0..<6:
+  for pageIdx in 0..<NUM_PAGES:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     var header: PageHeader
     discard spi_flash_read(pageAddr, addr header, sizeof(header).uint32)
@@ -120,7 +119,7 @@ proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: array[8, uint
   var targetEntryIdx = -1
   var targetPageHeader: PageHeader
   var targetEntryTable: array[32, uint8]
-  for pageIdx in 0..<6:
+  for pageIdx in 0..<NUM_PAGES:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     discard spi_flash_read(pageAddr, addr targetPageHeader, sizeof(targetPageHeader).uint32)
     if targetPageHeader.state == PS_UNINITIALIZED:
@@ -234,7 +233,7 @@ proc nvs_erase_key*(handle: nvs_handle_t, key: cstring): esp_err_t {.exportc.} =
 
 proc nvs_erase_all*(handle: nvs_handle_t): esp_err_t {.exportc.} =
   let nsIndex = if handle == 0x1234: 0.uint8 else: handle.uint8
-  for pageIdx in 0..<6:
+  for pageIdx in 0..<NUM_PAGES:
     let pageAddr = NVS_PARTITION_OFFSET + (pageIdx.uint32 * PAGE_SIZE)
     var entryTable: array[32, uint8]; discard spi_flash_read(pageAddr + ENTRY_TABLE_OFFSET, addr entryTable, 32)
     var modded = false
