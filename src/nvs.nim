@@ -27,6 +27,8 @@ const
   ENTRY_SIZE = 32.uint32
 
 template alignDown(n: uint32, a: uint32): uint32 = (n div a) * a
+
+const
   ENTRIES_PER_PAGE = 126
   ENTRY_TABLE_OFFSET = 32.uint32
   ENTRY_DATA_OFFSET = 64.uint32
@@ -76,7 +78,7 @@ type
 type
   CacheEntry = object
     hash: uint16
-    addr: uint32
+    address: uint32
 
 var cacheTable: array[64, CacheEntry]
 
@@ -86,23 +88,23 @@ proc calculateKeyHash(nsIndex: uint8, key: string): uint16 =
   h = crc32_le(h, addr key[0], key.len.uint32)
   return (h shr 16).uint16
 
-proc updateCache(nsIndex: uint8, key: string, addr: uint32) =
+proc updateCache(nsIndex: uint8, key: string, address: uint32) =
   let h = calculateKeyHash(nsIndex, key)
   let idx = h mod 64
   cacheTable[idx].hash = h
-  cacheTable[idx].addr = addr
+  cacheTable[idx].address = address
 
 proc invalidateCache(nsIndex: uint8, key: string) =
   let h = calculateKeyHash(nsIndex, key)
   let idx = h mod 64
   if cacheTable[idx].hash == h:
-    cacheTable[idx].addr = 0
+    cacheTable[idx].address = 0
 
 proc getFromCache(nsIndex: uint8, key: string): uint32 =
   let h = calculateKeyHash(nsIndex, key)
   let idx = h mod 64
   if cacheTable[idx].hash == h:
-    return cacheTable[idx].addr
+    return cacheTable[idx].address
   return 0
 
 proc writeItem(nsIndex: uint8, datatype: uint8, key: string, data: pointer, length: uint32, chunkIndex: uint8 = 0xff): esp_err_t

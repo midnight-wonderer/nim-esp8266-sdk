@@ -55,15 +55,6 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "vendor/components/esp8266/source/hw_random.c".}
 {.compile: sdkBase / "vendor/components/esp_event/esp_event.c".}
 {.compile: sdkBase / "vendor/components/esp_event/event_send.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/ccmp.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-ccm.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-internal.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-internal-enc.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1-pbkdf2.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-omac1.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1-internal.c".}
-{.compile: sdkBase / "vendor/components/wpa_supplicant/port/os_xtensa.c".}
 {.compile: "stubs.c".}
 {.compile: sdkBase / "vendor/components/esp8266/source/chip_boot.c".}
 {.compile: sdkBase / "vendor/components/esp8266/source/backtrace.c".}
@@ -98,7 +89,7 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "vendor/components/freertos/port/esp8266/xtensa_context.S".}
 {.compile: sdkBase / "vendor/components/freertos/port/esp8266/xtensa_vectors.S".}
 
-# LwIP (minimal set for mDNS + TCP server)
+# LwIP
 {.compile: sdkBase / "vendor/components/lwip/lwip/src/core/tcp.c".}
 {.compile: sdkBase / "vendor/components/lwip/lwip/src/core/tcp_in.c".}
 {.compile: sdkBase / "vendor/components/lwip/lwip/src/core/tcp_out.c".}
@@ -145,6 +136,39 @@ const portBase = currentSourcePath().parentDir()
 {.compile: sdkBase / "vendor/components/lwip/lwip/src/netif/ethernet.c".}
 {.compile: sdkBase / "vendor/components/lwip/port/esp8266/netif/wlanif.c".}
 {.compile: sdkBase / "vendor/components/lwip/port/esp8266/freertos/sys_arch.c".}
+{.compile: sdkBase / "vendor/components/lwip/port/esp8266/vfs_lwip.c".}
+{.compile: sdkBase / "vendor/components/newlib/src/syscall.c".}
+{.compile: sdkBase / "vendor/components/newlib/src/time.c".}
+
+# WPA Supplicant
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/rsn_supp/wpa.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/rsn_supp/wpa_ie.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/rsn_supp/pmksa_cache.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/common/wpa_common.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/esp_supplicant/esp_wpas_glue.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/utils/common.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/utils/wpa_debug.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/utils/wpabuf.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/md5.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/md5-internal.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-unwrap.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-wrap.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-ccm.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/ccmp.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-internal.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-internal-enc.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-internal-dec.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/aes-omac1.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/rc4.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha256.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha256-prf.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha256-internal.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1-internal.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/sha1-pbkdf2.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/src/crypto/crypto_ops.c".}
+{.compile: sdkBase / "vendor/components/wpa_supplicant/port/os_xtensa.c".}
 
 type
   esp_err_t* = int32

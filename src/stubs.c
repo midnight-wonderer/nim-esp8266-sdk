@@ -20,12 +20,6 @@ void vApplicationMallocFailedHook(void) {}
 // SDK dummies
 void esp_reconfigure_debug_uart(int uart_num) {}
 
-// LwIP / Networking stubs
-
-void esp_vfs_lwip_sockets_register(void) {}
-
-void *_sbrk_r(struct _reent *r, ptrdiff_t incr) { return NULL; }
-
 void esp_sleep_lock(void) {}
 void esp_sleep_unlock(void) {}
 
@@ -35,20 +29,16 @@ void __assert_func(const char *file, int line, const char *func,
     ;
 }
 
-void _exit(int status) {
-  while (1)
-    ;
-}
-
-// PThread Mutex Implementation - Handled by SDK pthread component
-
-void esp_supplicant_init(void) {}
-
 void uart_tx_wait_idle(uint8_t uart_no) {}
-void abort(void) {
-  while (1)
-    ;
-}
 
 void esp_sleep_start(void) {}
-void esp_supplicant_deinit(void) {}
+
+// Supplicant/WPA3 Stubs (Safe to stub if not using SAE or SoftAP)
+void esp_wpa3_free_sae_data(void) {}
+void hostapd_get_psk(void) {}
+void wpa_receive(void) {}
+void esp_wifi_register_wpa3_cb(void *cb) {}
+void wpa_ap_join(void) {}
+void wpa_ap_remove(void) {}
+void hostap_init(void) {}
+void hostap_deinit(void) {}

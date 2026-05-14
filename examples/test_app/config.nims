@@ -31,6 +31,11 @@ switch("passC", "-ffunction-sections")
 switch("passC", "-fdata-sections")
 switch("passC", "-DCONFIG_IEEE80211W")
 switch("passC", "-DLWIP_IPV6=1")
+switch("passC", "-DESP_SUPPLICANT")
+switch("passC", "-DCONFIG_WPA3_SAE")
+switch("passC", "-D__bswap_16=__builtin_bswap16")
+switch("passC", "-D__bswap_32=__builtin_bswap32")
+switch("passC", "-DCONFIG_ESP8266_TIME_SYSCALL_USE_FRC1")
 switch("passC", "-include sdkconfig.h")
 
 # Linker flags
