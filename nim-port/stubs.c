@@ -50,18 +50,6 @@ uint16_t ip6_chksum_pseudo(void *p, void *src, void *dest, uint8_t proto,
   return 0;
 }
 
-esp_err_t esp_event_handler_register(esp_event_base_t event_base,
-                                     int32_t event_id,
-                                     esp_event_handler_t event_handler,
-                                     void *event_handler_arg) {
-  return 0;
-}
-esp_err_t esp_event_handler_unregister(esp_event_base_t event_base,
-                                       int32_t event_id,
-                                       esp_event_handler_t event_handler) {
-  return 0;
-}
-
 // System stubs for linker
 int pthread_setcancelstate(int state, int *oldstate) { return 0; }
 void esp_vfs_lwip_sockets_register(void) {}
@@ -128,13 +116,11 @@ int pthread_key_create(uint32_t *key, void (*destructor)(void *)) {
   return 0;
 }
 
-// NVS is now implemented in Nim (nvs.nim)
-
 void pp_soft_wdt_stop(void) {}
 void pp_soft_wdt_restart(void) {}
 
 void esp_supplicant_init(void) {}
-esp_err_t tcpip_adapter_set_default_wifi_handlers(void) { return 0; }
+
 void uart_tx_wait_idle(uint8_t uart_no) {}
 void abort(void) {
   while (1)
