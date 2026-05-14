@@ -45,6 +45,17 @@ nim c main.nim
 nim flash
 ```
 
+## Maintenance
+
+Since this library vendors the original SDK and its components as plain files (submodules removed for simplicity), you can check the following upstream repositories for updates:
+
+- **Main SDK**: [espressif/ESP8266_RTOS_SDK](https://github.com/espressif/ESP8266_RTOS_SDK)
+- **LwIP**: [espressif/esp-lwip](https://github.com/espressif/esp-lwip)
+- **mbedTLS**: [espressif/mbedtls](https://github.com/espressif/mbedtls)
+- **cJSON**: [DaveGamble/cJSON](https://github.com/DaveGamble/cJSON)
+- **MQTT**: [espressif/esp-mqtt](https://github.com/espressif/esp-mqtt)
+- **CoAP**: [obgm/libcoap](https://github.com/obgm/libcoap)
+
 ## License
 
 This project is licensed under Apache-2.0, same as the ESP8266_RTOS_SDK.
