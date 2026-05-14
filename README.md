@@ -13,7 +13,25 @@ This library packages the entire ESP8266_RTOS_SDK and provides Nim bindings for 
 ## Prerequisites
 
 - **Xtensa Toolchain**: You must have `xtensa-lx106-elf-gcc` in your PATH.
-- **Nim**: Version 1.6.0 or higher.
+- **Nim**: Version 2.
+
+## Configuration
+
+To simplify your project setup, the library provides a centralized configuration helper. Create a `config.nims` in your project root with the following content:
+
+```nim
+import os, strutils
+const sdkPath = gorge("nimble path esp8266_sdk").strip()
+if sdkPath != "":
+  include sdkPath / "src/config_helper.nims"
+```
+
+This helper automatically:
+1. Configures the cross-compiler and architecture flags.
+2. Sets up the linker scripts and static libraries.
+3. Provides a `flash` task (`nim flash`).
+4. Provides a `setup` task (`nim setup`) to generate `nim.cfg` for IDE support.
+5. Handles `sdkconfig.h` (uses your project's `src/sdkconfig.h` if present, otherwise falls back to a library default).
 
 ## Usage
 
