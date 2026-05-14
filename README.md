@@ -47,7 +47,15 @@ nim flash
 
 ## Maintenance
 
-Since this library vendors the original SDK and its components as plain files (submodules removed for simplicity), you can check the following upstream repositories for updates:
+Since this library vendors the original SDK and its components as plain files (submodules removed for simplicity), you can use the provided `justfile` to update them:
+
+```bash
+just update-all      # Update everything
+just update-sdk      # Update only the main SDK
+just update-lwip     # Update only LwIP
+```
+
+Alternatively, you can manually check the following upstream repositories:
 
 - **Main SDK**: [espressif/ESP8266_RTOS_SDK](https://github.com/espressif/ESP8266_RTOS_SDK)
 - **LwIP**: [espressif/esp-lwip](https://github.com/espressif/esp-lwip)
