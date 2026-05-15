@@ -69,6 +69,11 @@ const portBase = thisDir
 
 # Core C Files (to be compiled by Nim)
 {.compile: sdkBase / "vendor/components/esp8266/source/hw_random.c".}
+{.compile: sdkBase / "vendor/components/esp8266/driver/gpio.c".}
+{.compile: sdkBase / "vendor/components/esp8266/driver/adc.c".}
+{.compile: sdkBase / "vendor/components/esp8266/driver/i2c.c".}
+{.compile: sdkBase / "vendor/components/esp8266/driver/spi.c".}
+{.compile: sdkBase / "vendor/components/esp8266/driver/pwm.c".}
 {.compile: sdkBase / "vendor/components/esp_event/esp_event.c".}
 {.compile: sdkBase / "vendor/components/esp_event/event_send.c".}
 {.compile: "stubs.c".}
