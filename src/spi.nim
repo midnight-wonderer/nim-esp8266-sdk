@@ -30,7 +30,7 @@ type
   spi_event_callback_t* = proc (event: int32, arg: pointer) {.cdecl.}
 
   spi_config_t* {.importc: "spi_config_t", header: "driver/spi.h".} = object
-    interface*: spi_interface_t
+    interface_cfg* {.importc: "interface".}: spi_interface_t
     intr_enable*: spi_intr_enable_t
     event_cb*: spi_event_callback_t
     mode*: spi_mode_t
@@ -41,10 +41,10 @@ type
 
   spi_trans_t* {.importc: "spi_trans_t", header: "driver/spi.h".} = object
     cmd*: ptr uint16
-    addr*: ptr uint32
+    address* {.importc: "addr".}: ptr uint32
     mosi*: ptr uint32
     miso*: ptr uint32
-    bits*: uint32 # Actually a union in C, but we can treat as uint32 for simplicity or map it properly
+    bits*: uint32
 
 proc spi_init*(host: spi_host_t, config: ptr spi_config_t): esp_err_t {.importc: "spi_init", header: "driver/spi.h".}
 proc spi_deinit*(host: spi_host_t): esp_err_t {.importc: "spi_deinit", header: "driver/spi.h".}

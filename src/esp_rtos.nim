@@ -24,6 +24,7 @@ const portBase = thisDir
 # Compiler Flags
 {.passC: "-I" & portBase.}
 {.passC: "-I" & sdkBase / "vendor/components/esp8266/include".}
+{.passC: "-I" & sdkBase / "vendor/components/esp8266/include/driver".}
 {.passC: "-I" & sdkBase / "vendor/components/bootloader_support/include".}
 {.passC: "-I" & sdkBase / "vendor/components/freertos/include".}
 {.passC: "-I" & sdkBase / "vendor/components/freertos/include/freertos".}

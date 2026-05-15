@@ -8,6 +8,14 @@ const PASS {.strdefine.} = "YOUR_PASS_HERE"
 
 proc app_main*() {.exportc.} =
   echo "Nim Wi-Fi Connect Starting..."
+  
+  # Peripheral Test
+  discard gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT)
+  discard gpio_set_level(GPIO_NUM_2, 1)
+  
+  var adc_val: uint16
+  discard adc_read(addr adc_val)
+  echo "ADC Val: ", adc_val
 
   var init_cfg = wifi_init_config_t(
     magic: 0x1F2F3F4F,
